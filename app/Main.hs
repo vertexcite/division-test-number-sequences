@@ -1,27 +1,11 @@
 import Data.Foldable (maximumBy, for_)
 import Data.Ord (comparing)
-import Data.Digits (digits, unDigits)
-
--- Source of below function: https://stackoverflow.com/questions/29153110/left-pad-a-haskell-list
-lpad :: Num a => Int -> [a] -> [a]
-lpad m xs = replicate (m - length ys) 0 ++ ys
-    where ys = take m xs
-
 
 test :: Integral n => n -> n -> n -> n
-test b k n = unDigits b added
+test b k n = k * lastDigit + otherDigits
   where
-    ds = digits b n
-    lastDigit = last ds
-    otherDigits = init ds
-    lk = lastDigit * k
-    lkds = digits b lk
-    added = lkds `addDigits` otherDigits
-
-addDigits :: Integral a => [a] -> [a] -> [a]
-addDigits xs ys = zipWith (+) (lpad m xs) (lpad m ys)
-  where
-    m = max (length xs) (length ys) 
+    lastDigit =  n `mod` b
+    otherDigits = n `div` b
 
 -- Source of below function: https://wiki.haskell.org/Floyd's_cycle-finding_algorithm
 findCycle :: Eq a => [a] -> ([a],[a])
