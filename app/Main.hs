@@ -33,26 +33,42 @@ periodicity b k n = (length xs, length ys)
     (xs, ys) = findHeadAndCycle b k n
 
 
-periodicitiesTagged :: Integral b => b -> [(b, b, Int, Int)]
-periodicitiesTagged b = do
-  k <- [1..20]
+periodicitiesTagged :: Integral b => b -> [b] -> [(b, b, Int, Int)]
+periodicitiesTagged b testRange = do
+  k <- testRange
   n <- [1]
   let (x, y) = periodicity b k n
   pure (k, n, x, y)
 
-longestCycle :: Integral b => b -> (b, b, Int, Int)
-longestCycle b = maximumBy (comparing (\(_, _, _, y) -> y)) (periodicitiesTagged b)
+longestCycle :: Integral b => b -> [b] -> (b, b, Int, Int)
+longestCycle b testRange = maximumBy (comparing (\(_, _, _, y) -> y)) (periodicitiesTagged b testRange)
 
--- `periodicities 10` sequence matches https://oeis.org/A128858, not sure why
-periodicities :: Integral b => b -> [Int]
-periodicities b = (\(_, _, _, y) -> y) <$> periodicitiesTagged b
+-- Not sure why, but `periodicities b` sequence matches relevant multiplicative orders.
+-- E.g.,
+-- b, url
+--  2, https://oeis.org/A002326
+--  3, https://oeis.org/A003572
+--  4, https://oeis.org/A003574
+--  5, https://oeis.org/A217852
+-- 10, https://oeis.org/A128858
+periodicities :: Integral b => b -> [b] -> [Int]
+periodicities b testRange = (\(_, _, _, y) -> y) <$> periodicitiesTagged b testRange
 
-insertions :: Integral b => b -> [Int]
-insertions b = (\(_, _, x, _) -> x) <$> periodicitiesTagged b
+insertions :: Integral b => b -> [b] -> [Int]
+insertions b testRange = (\(_, _, x, _) -> x) <$> periodicitiesTagged b testRange
+
+multiplicativeOrderCheck :: (Integral a, Integral b) => a -> b -> a -> Bool
+multiplicativeOrderCheck b m n = ( b ^ m - 1 ) `mod` (b * n - 1) == 0
 
 main :: IO ()
 main = do
-  for_ [2..10] $ \b -> do
-    print b
-    print $ periodicities b
-    putStrLn ""
+  let 
+    ns = [1..20]
+    bs = [2..20]
+    checksForallBases = do
+      b <- bs
+      let 
+        ms = periodicities b ns
+        checksForallSubscripts = zipWith (multiplicativeOrderCheck b) ms ns
+      pure $ and checksForallSubscripts
+  print $ and checksForallBases
