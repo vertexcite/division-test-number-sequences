@@ -1,10 +1,27 @@
 import Data.Foldable (maximumBy, for_)
 import Data.Ord (comparing)
+import Data.Digits (digits, unDigits)
 
-test :: Integral a => a -> a -> a
-test k n = k * unitsDigit + shiftedRight where
-  unitsDigit = n `mod` 10
-  shiftedRight = n `div` 10
+-- Source of below function: https://stackoverflow.com/questions/29153110/left-pad-a-haskell-list
+lpad :: Num a => Int -> [a] -> [a]
+lpad m xs = replicate (m - length ys) 0 ++ ys
+    where ys = take m xs
+
+
+test :: Integral n => n -> n -> n -> n
+test b k n = unDigits b added
+  where
+    ds = digits b n
+    lastDigit = last ds
+    otherDigits = init ds
+    lk = lastDigit * k
+    lkds = digits b lk
+    added = lkds `addDigits` otherDigits
+
+addDigits :: Integral a => [a] -> [a] -> [a]
+addDigits xs ys = zipWith (+) (lpad m xs) (lpad m ys)
+  where
+    m = max (length xs) (length ys) 
 
 -- Source of below function: https://wiki.haskell.org/Floyd's_cycle-finding_algorithm
 findCycle :: Eq a => [a] -> ([a],[a])
@@ -20,43 +37,38 @@ findCycle xxs = fCycle xxs xxs
          | x == y              = []
          | otherwise           = y:fLength x ys
 
-iteration :: Integral a => a -> a -> [a]
-iteration k = iterate (test k)
+iteration :: Integral a => a -> a -> a -> [a]
+iteration b k = iterate (test b k)
 
-findHeadAndCycle :: Integer -> Integer -> ([Integer], [Integer])
-findHeadAndCycle = (findCycle .) . iteration
+findHeadAndCycle :: Integral a => a -> a -> a -> ([a], [a])
+findHeadAndCycle b k n = findCycle $ iteration b k n
 
-periodicity :: Integer -> Integer -> (Int, Int)
-periodicity k n = (length xs, length ys)
+periodicity :: Integral a => a -> a -> a -> (Int, Int)
+periodicity b k n = (length xs, length ys)
   where
-    (xs, ys) = findHeadAndCycle k n
+    (xs, ys) = findHeadAndCycle b k n
 
 
-periodicitiesTagged :: [(Integer, Integer, Int, Int)]
-periodicitiesTagged = do
-  k <- [1..1000]
+periodicitiesTagged :: Integral b => b -> [(b, b, Int, Int)]
+periodicitiesTagged b = do
+  k <- [1..20]
   n <- [1]
-  let (x, y) = periodicity k n
+  let (x, y) = periodicity b k n
   pure (k, n, x, y)
 
-longestCycle :: (Integer, Integer, Int, Int)
-longestCycle = maximumBy (comparing (\(_, _, _, y) -> y)) periodicitiesTagged
+longestCycle :: Integral b => b -> (b, b, Int, Int)
+longestCycle b = maximumBy (comparing (\(_, _, _, y) -> y)) (periodicitiesTagged b)
 
--- This sequence matches https://oeis.org/A128858, not sure why
-periodicities :: [Int]
-periodicities = (\(_, _, _, y) -> y) <$> periodicitiesTagged
+-- `periodicities 10` sequence matches https://oeis.org/A128858, not sure why
+periodicities :: Integral b => b -> [Int]
+periodicities b = (\(_, _, _, y) -> y) <$> periodicitiesTagged b
 
-insertions :: [Int]
-insertions = (\(_, _, x, _) -> x) <$> periodicitiesTagged
+insertions :: Integral b => b -> [Int]
+insertions b = (\(_, _, x, _) -> x) <$> periodicitiesTagged b
 
-displayLotsOfOutput :: IO ()
-displayLotsOfOutput = do
-  for_ [1..20] $ \k -> do
-    print k
-    for_ [0..2*10*k] $ \n -> do
-      let (x, y) = periodicity k n
-      print (k, n, x, y)
-    putStrLn ""
-  
 main :: IO ()
-main = print periodicities
+main = do
+  for_ [2..10] $ \b -> do
+    print b
+    print $ periodicities b
+    putStrLn ""
